@@ -1,5 +1,6 @@
+# Hi from Pycharm
+
 import os
-import torch
 import numpy as np
 import tifffile as tiff
 from PIL import Image
@@ -27,10 +28,8 @@ class SatelliteDataset(Dataset):
         # Load image and mask
         image = tiff.imread(img_path)
         image = image.astype(np.float32)
-        mask = np.array(Image.open(mask_path).convert('L'), dtype=np.float32)
 
-        if len(mask.shape) == 4 and mask.shape[1] == 1:  # Check if there's an extra singleton dimension
-            mask = torch.squeeze(mask, dim=1)  # Squeeze out the unnecessary dimension
+        mask = np.array(Image.open(mask_path).convert('L'), dtype=np.float32)
 
         # Apply transformations using named arguments
         if self.transform:
@@ -39,8 +38,5 @@ class SatelliteDataset(Dataset):
         if self.target_transform:
             augmented_mask = self.target_transform(image=mask)  # Named argument for mask
             mask = augmented_mask['image']
-
-
-
 
         return image, mask
