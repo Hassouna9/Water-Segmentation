@@ -13,6 +13,7 @@ from utils import (
     get_loaders,
     check_accuracy,
     save_predictions_as_imgs,
+    visualize_rgb
 )
 
 def define_transforms():
@@ -36,8 +37,7 @@ def train_fn(loader, model, optimizer, loss_fn, scaler, device):
     loop = tqdm(loader)
     for batch_idx, (data, targets) in enumerate(loop):
         data = data.to(device=device)
-        targets = targets.float().to(device=device)  # Remove unsqueeze operation
-        print(f"data shape: {data.shape}, targets shape: {targets.shape}")
+        targets = targets.float().to(device=device)
 
         optimizer.zero_grad()
 
@@ -67,7 +67,9 @@ def main():
 
     model = UNET(in_channels=12, out_channels=1).to(DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
-    loss_fn = nn.BCEWithLogitsLoss()
+    # loss_fn = nn.BCEWithLogitsLoss()
+    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([1]).to(DEVICE))
+
     scaler = torch.amp.GradScaler() if DEVICE == 'cuda' else None
 
     train_transform, val_transforms = define_transforms()
@@ -77,10 +79,19 @@ def main():
         16, train_transform, val_transforms,
         2, True)
 
+    # Visualize the RGB of each image in the first batch
+    train_iter = iter(train_loader)
+    first_batch = next(train_iter)
+    images, masks = first_batch
+
+    # Loop through each image in the batch and visualize it
+    for idx, image in enumerate(images):
+        visualize_rgb(image, folder="rgb_visualization", file_prefix=f"train_image_{idx}")
+
     if LOAD_MODEL and os.path.isfile("my_checkpoint.pth.tar"):
         load_checkpoint(torch.load("my_checkpoint.pth.tar"), model)
 
-    for epoch in range(3):
+    for epoch in range(5):
         train_fn(train_loader, model, optimizer, loss_fn, scaler, DEVICE)
         check_accuracy(val_loader, model, device=DEVICE)
         if DEVICE == 'cuda':
